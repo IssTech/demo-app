@@ -17,7 +17,7 @@ from faker import Faker
 # Ensure the database 'fastapi_users_db' exists before running the app.
 POSTGRES_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:password@localhost:5432/fastapi_users_db" # 
+    "postgresql://postgres:password@localhost:5432/demo_app_db" # 
 )
 
 # SQLAlchemy Setup
