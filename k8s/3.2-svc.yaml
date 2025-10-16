@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app-service
+  namespace: demo-app
+spec:
+  # The service routes traffic to pods with this label
+  selector:
+    app: demo-app
+  # NodePort is a simple way to expose a service for local testing (like Minikube)
+  # For production, you would typically use LoadBalancer (on cloud K8s) or Ingress
+  type: NodePort
+  ports:
+    - protocol: TCP
+      port: 80 # The port the service exposes
+      targetPort: 8000 # The port the container is listening on (from Dockerfile)
+      nodePort: 30007 # Accessible via HOST_IP:30007 (must be 30000-32767)
