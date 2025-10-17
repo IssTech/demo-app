@@ -5,7 +5,7 @@ metadata:
   namespace: demo-app
 spec:
   # This MUST match the storageClassName defined in the PV
-  storageClassName: nfs-storage-class
+  # storageClassName: nfs-storage-class
   # Defines how the volume can be mounted (ReadWriteOnce is typical for single-node DBs)
   accessModes:
     - ReadWriteOnce

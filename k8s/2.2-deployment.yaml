@@ -42,7 +42,7 @@ spec:
         # Mount the persistent volume for data
         volumeMounts:
         - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
+          mountPath: /var/lib/postgresql/data2
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:

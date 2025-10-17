@@ -6,18 +6,17 @@ metadata:
     type: nfs
 spec:
   # Use the user-defined storage class name
-  storageClassName: nfs-storage-class
+  storageClassName: longhorn
   capacity:
     storage: 1Gi
   accessModes:
     # Allows a single node to mount the volume read-write
     - ReadWriteOnce 
-  # This section defines the NFS connection details
-  nfs:
-    # *** REPLACE WITH YOUR NFS SERVER IP/HOSTNAME ***
-    server: "185.189.28.92" 
-    # *** REPLACE WITH YOUR NFS EXPORT PATH ***
-    path: "/mnt/k8s_nfs/postgres/data"
-    readOnly: false
-  # Reclaim policy ensures data is protected after PVC deletion
-  persistentVolumeReclaimPolicy: Delete
+  # Retain the volume and its data even after the PVC is deleted
+  persistentVolumeReclaimPolicy: Retain
+  # csi: 
+  #   driver: nfs.csi.k8s.io 
+  #   volumeHandle: postgres-nfs-pv 
+  #   volumeAttributes:
+  #     server: "192.168.1.100" 
+  #     share: "/mnt/k8s_nfs" # CSI uses 'share' instead of 'path'

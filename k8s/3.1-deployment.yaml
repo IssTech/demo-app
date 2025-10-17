@@ -23,9 +23,10 @@ spec:
         ports:
         - containerPort: 8000
         env:
-          # Construct the full DATABASE_URL from Secret and ConfigMap values
+          # This failed because it relied on shell substitution inside the 'value' field:
         - name: DATABASE_URL
-          value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)
+          # value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)
+          value: "postgresql://postgres:password@postgres-service:5432/demo_app_db"
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
