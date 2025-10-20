@@ -25,33 +25,11 @@ spec:
         env:
           # This failed because it relied on shell substitution inside the 'value' field:
         - name: DATABASE_URL
-          # value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)
-          value: "postgresql://postgres:password@postgres-service:5432/demo_app_db"
-        - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: postgres-secrets
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secrets
-              key: POSTGRES_PASSWORD
-        - name: DB_NAME
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: DB_NAME
-        - name: DB_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: DB_HOST
-        - name: DB_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: DB_PORT
+              name: postgres-postgresql
+              key: POSTGRES_URL
+        
         # Pull resource limits from ConfigMap
         envFrom:
         - configMapRef:

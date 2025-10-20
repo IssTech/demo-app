@@ -6,6 +6,6 @@ metadata:
 data:
   # Database Configuration
   DB_NAME: "demo_app_db"
-  DB_HOST: "postgres-service"
+  DB_HOST: "postgres-postgresql"
   DB_PORT: "5432"
 

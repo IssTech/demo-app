@@ -1,13 +1,18 @@
+# 2.2-statefulset.yaml (Modified from 2.2-deployment.yaml)
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet # CHANGED: Deployment -> StatefulSet
 metadata:
-  name: postgres-deployment
+  name: postgres
   namespace: demo-app
+  annotations:
+      kanister.kasten.io/blueprint: postgres-non-exclusive-backup
   labels:
-    app: postgres
+        app: postgres
+        app.kubernetes.io/instance: postgres    
 spec:
   # Database usually runs as a single replica
   replicas: 1
+  serviceName: postgres-postgresql # ADDED: Required for StatefulSet and must match the Service name (2.3-svc.yaml)
   selector:
     matchLabels:
       app: postgres
@@ -15,6 +20,7 @@ spec:
     metadata:
       labels:
         app: postgres
+        app.kubernetes.io/instance: postgres
     spec:
       containers:
       - name: postgres
@@ -26,13 +32,13 @@ spec:
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: postgres-secrets
+              name: postgres-postgresql
               key: POSTGRES_USER
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: postgres-secrets
-              key: POSTGRES_PASSWORD
+              name: postgres-postgresql
+              key: postgres-password # CHANGED: POSTGRES_PASSWORD -> postgres-password to match Blueprint
         # Load non-sensitive data (DB name) from the ConfigMap
         - name: POSTGRES_DB
           valueFrom:
@@ -42,7 +48,7 @@ spec:
         # Mount the persistent volume for data
         volumeMounts:
         - name: postgres-storage
-          mountPath: /var/lib/postgresql/data2
+          mountPath: /var/lib/postgresql/data4
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:

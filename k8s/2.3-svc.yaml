@@ -1,12 +1,14 @@
+# 2.3-svc.yaml (Modified)
 apiVersion: v1
 kind: Service
 metadata:
-  # This name MUST match the host in the application's DATABASE_URL
-  name: postgres-service
+  # This name MUST match the host in the application's DATABASE_URL and the StatefulSet's serviceName
+  name: postgres-postgresql
   namespace: demo-app
 spec:
   # ClusterIP exposes the service only within the cluster (internal access only)
   type: ClusterIP
+  clusterIP: None # CHANGED: Makes this a Headless Service, required for StatefulSets
   selector:
     app: postgres
   ports:
