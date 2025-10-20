@@ -3,7 +3,7 @@ name = "demo-app"
 version = "0.1.0"
 description = "FastAPI + PostgreSQL Setup Guide (Ubuntu/Virtual Env with Docker DB)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "faker>=37.11.0",
     "fastapi[all]>=0.119.1",
