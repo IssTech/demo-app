@@ -7,7 +7,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from faker import Faker
 
 # --- 1. Configuration and Database Setup ---
@@ -17,7 +17,7 @@ from faker import Faker
 # Ensure the database 'fastapi_users_db' exists before running the app.
 POSTGRES_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:password@localhost:5432/demo_app_db" # 
+    "postgresql://postgres:password@localhost:5432/demo_app_db" #
 )
 
 # SQLAlchemy Setup
@@ -30,7 +30,7 @@ def get_engine():
         try:
             engine = create_engine(POSTGRES_URL, echo=False)
             # Try to connect immediately to trigger an OperationalError if needed
-            with engine.connect() as connection:
+            with engine.connect():
                 print("Database connection successful.")
             return engine
         except OperationalError as e:
@@ -70,11 +70,12 @@ class UserCreate(UserBase):
     pass # Same fields for creation
 
 class UserSchema(UserBase):
-    id: int
-
-    class Config:
+    model_config = ConfigDict(
         # Enables conversion from SQLAlchemy model instances to Pydantic objects
-        from_attributes = True
+        from_attributes=True
+    )
+
+    id: int
 
 # --- 4. FastAPI Application Setup and Dependencies ---
 
@@ -112,7 +113,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db_session)):
     """
     Adds a new user record to the database.
     """
-    db_user = User(**user.dict())
+    db_user = User(**user.model_dump())
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -146,7 +147,7 @@ def update_user(user_id: int, user_update: UserCreate, db: Session = Depends(get
         raise HTTPException(status_code=404, detail="User not found")
 
     # Update fields
-    for key, value in user_update.dict().items():
+    for key, value in user_update.model_dump().items():
         setattr(db_user, key, value)
 
     db.commit()
