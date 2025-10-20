@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from pydantic import BaseModel
 from faker import Faker
@@ -108,7 +108,7 @@ def get_db_session():
 # --- 5. API Endpoints (CRUD Operations) ---
 
 @app.post("/users/", response_model=UserSchema, status_code=201, summary="Create a new user")
-def create_user(user: UserCreate, db: SessionLocal = Depends(get_db_session)):
+def create_user(user: UserCreate, db: Session = Depends(get_db_session)):
     """
     Adds a new user record to the database.
     """
@@ -119,7 +119,7 @@ def create_user(user: UserCreate, db: SessionLocal = Depends(get_db_session)):
     return db_user
 
 @app.get("/users/", response_model=List[UserSchema], summary="Read all users")
-def read_users(skip: int = 0, limit: int = 100, db: SessionLocal = Depends(get_db_session)):
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db_session)):
     """
     Retrieves a list of all user records, with optional pagination.
     """
@@ -127,7 +127,7 @@ def read_users(skip: int = 0, limit: int = 100, db: SessionLocal = Depends(get_d
     return users
 
 @app.get("/users/{user_id}", response_model=UserSchema, summary="Read a single user by ID")
-def read_user(user_id: int, db: SessionLocal = Depends(get_db_session)):
+def read_user(user_id: int, db: Session = Depends(get_db_session)):
     """
     Retrieves a single user record based on its unique ID.
     """
@@ -137,7 +137,7 @@ def read_user(user_id: int, db: SessionLocal = Depends(get_db_session)):
     return user
 
 @app.put("/users/{user_id}", response_model=UserSchema, summary="Modify an existing user")
-def update_user(user_id: int, user_update: UserCreate, db: SessionLocal = Depends(get_db_session)):
+def update_user(user_id: int, user_update: UserCreate, db: Session = Depends(get_db_session)):
     """
     Updates the data for an existing user record.
     """
@@ -154,7 +154,7 @@ def update_user(user_id: int, user_update: UserCreate, db: SessionLocal = Depend
     return db_user
 
 @app.delete("/users/{user_id}", status_code=204, summary="Remove a user")
-def delete_user(user_id: int, db: SessionLocal = Depends(get_db_session)):
+def delete_user(user_id: int, db: Session = Depends(get_db_session)):
     """
     Deletes a user record permanently from the database.
     """
@@ -169,7 +169,7 @@ def delete_user(user_id: int, db: SessionLocal = Depends(get_db_session)):
 # --- 6. Data Seeder Endpoint ---
 
 @app.post("/populate_50", status_code=201, summary="Seed the database with 50 fake users")
-def populate_data(db: SessionLocal = Depends(get_db_session)):
+def populate_data(db: Session = Depends(get_db_session)):
     """
     Populates the 'users' table with 50 lines of synthetic data using the Faker library.
     """
