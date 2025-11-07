@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:16-alpine
+        image: postgres:17
         ports:
         - containerPort: 5432
         env:
@@ -38,17 +38,19 @@ spec:
           valueFrom:
             secretKeyRef:
               name: postgres-postgresql
-              key: postgres-password # CHANGED: POSTGRES_PASSWORD -> postgres-password to match Blueprint
-        # Load non-sensitive data (DB name) from the ConfigMap
+              key: POSTGRES_PASSWORD
         - name: POSTGRES_DB
           valueFrom:
             configMapKeyRef:
               name: app-config
               key: DB_NAME
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/db"
+
         # Mount the persistent volume for data
         volumeMounts:
         - name: postgres-storage
-          mountPath: /var/lib/postgresql/data4
+          mountPath: /var/lib/postgresql/data
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
