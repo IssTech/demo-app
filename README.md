@@ -1,77 +1,18 @@
-# FastAPI + PostgreSQL Setup Guide (Ubuntu/Virtual Env with Docker DB)
+# DEMO-APP based on FastAPI and PostgreSQL
 
-This guide explains how to set up and test the provided FastAPI application locally using a Python virtual environment on Ubuntu, connecting to a PostgreSQL database running inside a Docker container.
+This is a Demo-App that are used for Kasten by Veeam to demostrate how to Backup and Restore a App running in Kubernetes.
+
+It is including a blueprint that shows the power of `Backup-as-Code` so you can even modify the database content during the restore phase that is called `Sanitazing`.
 
 ## 1. Prerequisites
 
-You must have the following installed on your Ubuntu system:
+Running Kubernetes Cluster, single node cluster is good enough for this app to run on.
 
-Python 3: (Usually pre-installed)
+## 2. Installation
 
-Docker: (You will need to be able to run the docker command.)
-
-## 2. PostgreSQL Database Setup using a Single Docker Container
-
-We will use a single docker run command to create and manage the PostgreSQL service.
-
-Start the Database Container:
-Navigate to your project directory and run the following command. This creates a container named **fastapi-postgres-db**, sets the necessary credentials, and maps the port to your host machine.
-
-```
-docker run --name fastapi-postgres-db \
--e POSTGRES_DB=fastapi_users_db \
--e POSTGRES_USER=postgres \
--e POSTGRES_PASSWORD=password \
--p 5432:5432 \
--v postgres_data:/var/lib/postgresql/data \
--d postgres:16-alpine
-```
-
-The container will be available on your host machine at `localhost:5432`.
-
-Verify Database Readiness:
-Wait a few seconds for the database to initialize. The application uses a retry logic to wait for the database, but you can manually check the status if needed:
-
-docker logs fastapi-postgres-db
-Look for a message indicating the database is ready for connections.
+Either you clone the project and run `kubectl apply -f ./demo/k8s-base-installation/install-demo-app.yaml` or you can run direct from our GitHub repository. 
 
 
-## 3. Python Virtual Environment Setup
-
-It's best practice to isolate your project dependencies.
-
-Navigate to your project directory.
-
-Create a virtual environment:
-```
-python3 -m venv venv
-```
-
-Activate the environment:
-```
-source venv/bin/activate
-```
-
-(Your terminal prompt should now start with (venv))
-
-## 4. Install Dependencies
-
-Save the provided requirements.txt file in your project directory (if you haven't already).
-
-Install the dependencies:
-```
-pip install -r requirements.txt
-```
-
-## 5. Run the FastAPI Application
-
-Save the provided main.py file in your project directory.
-
-Start the server:
-The application will connect to the Postgres container running on localhost:5432.
-```
-uvicorn main:app --reload
-```
 
 The server will start running, typically at `http://127.0.0.1:8000`.
 
@@ -137,17 +78,14 @@ Click "Try it out", enter the id (e.g., 51), and execute.
 
 The status code should be 204 No Content. Verify by trying to GET `/users/51` which should return a 404 Not Found.
 
-## 7. Stopping the Server and Deactivating the Environment
+## Known Issues
 
-Stop the FastAPI Server: Press Ctrl+C in the terminal where uvicorn is running.
+If your environment is a small SuSE k3s or Ubuntu SnapK8s you probably ending up with local-path Storage Class. 
+```
+$ kubectl get sc
+NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  3d21h
+$ 
+```
 
-Stop the Docker Container: Stop and remove the database container (the data remains saved in the local volume):
-```
-docker stop fastapi-postgres-db
-docker rm fastapi-postgres-db
-```
-
-Deactivate the Environment:
-```
-deactivate
-```
+Kasten has a legacy support that calles **Generic Storage Backup (GCB)** that can startup a Kanister Sidecar, but this is not recommended so you should run a true **Container Storage Interface (CSI) Volume Snapshot** storage class like Ceph, QuoByte, NFS, Longhorn, IBM Storage Scale and many other. 

@@ -12,7 +12,8 @@ actions:
       objects:
         pgSecret:
           kind: Secret
-          name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql'
+          # name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql'
+          name: 'postgres-postgresql'
           namespace: '{{ .StatefulSet.Namespace }}'
       args:
         operation: create
@@ -27,7 +28,13 @@ actions:
             containers:
               - name: container
                 image: postgres:17
-                pullPolicy: IfNotPresent
+                resources:
+                  requests:
+                    memory: "512Mi"
+                    cpu: "500m"
+                  limits:
+                    memory: "4Gi"
+                    cpu: "1"
                 command:
                 - bash
                 - -o
@@ -38,7 +45,7 @@ actions:
                 - |
                   export PGHOST='{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql.{{ .StatefulSet.Namespace }}.svc.cluster.local'
                   export PGUSER='postgres'
-                  export PGPASSWORD='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "postgres-password" | toString }}'
+                  export PGPASSWORD='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "POSTGRES_PASSWORD" | toString }}'
                   ## Create file descriptor to send commands to psql
                   mkfifo /tmp/pg_in
                   ## Create "holder" process to keep pg_in open
@@ -48,6 +55,9 @@ actions:
                   ## Run psql session reading from pg_in and writing ot pg_out
                   ## Using tee here to keep the pod logs (might need to replace with just `> /tmp/pg_out`)
                   ## TODO: should we track stderr here?
+                  echo $PGPASSWORD
+                  echo $PGUSER
+                  echo $PGHOST
                   cat /tmp/pg_in | psql -U ${PGUSER} | tee /tmp/pg_out
     - func: WaitV2
       name: waitBackupSessionPodReady
