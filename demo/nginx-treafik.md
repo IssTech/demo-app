@@ -5,7 +5,7 @@ This demo shows how to use Kasten by Veeam's "Backup-as-Code" capabilities to mi
 As Kubernetes evolves, you might need to migrate from legacy NGINX Ingress to modern alternatives like **Traefik** or the **Gateway API**. Kasten makes this "Backup-as-Code" easy.
 
 For a deep dive, read the full blog post:  
-👉 (The Ingress Jungle: Surviving the NGINX Deprecation with Backup-as-Code)[https://www.isstech.io/blogg/the-ingress-jungle-surviving-the-nginx-deprecation-with-backup-as-code]
+👉 [The Ingress Jungle: Surviving the NGINX Deprecation with Backup-as-Code](https://www.isstech.io/blogg/the-ingress-jungle-surviving-the-nginx-deprecation-with-backup-as-code)
 
 ## **Scenario A: Migrate from NGINX to Traefik (Using Transform Sets)**
 
