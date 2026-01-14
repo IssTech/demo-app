@@ -1,91 +1,86 @@
-# DEMO-APP based on FastAPI and PostgreSQL
+# **DEMO-APP: FastAPI & PostgreSQL on Kubernetes**
 
-This is a Demo-App that are used for Kasten by Veeam to demostrate how to Backup and Restore a App running in Kubernetes.
+This is a Demo Application built with **FastAPI** and **PostgreSQL**, designed specifically for use with **Kasten by Veeam**. Its primary purpose is to demonstrate Kubernetes Backup and Restore capabilities, specifically highlighting **"Backup-as-Code"**.
 
-It is including a blueprint that shows the power of `Backup-as-Code` so you can even modify the database content during the restore phase that is called `Sanitazing`.
+It includes a Multiple Kanister Blueprint that shows multiple demo senarios, the first was performing **Data Sanitization** (masking PII) during the restore phase, showing how you can transform data securely when moving between environments (e.g., from Production to Development).
 
-## 1. Prerequisites
+## **1\. Architecture**
 
-Running Kubernetes Cluster, single node cluster is good enough for this app to run on.
+* **App:** FastAPI (Python) web server.  
+* **Database:** PostgreSQL 17 (deployed as a StatefulSet).  
+* **Infrastructure:** Kubernetes Namespace, ConfigMaps, Secrets, and Services.
 
-## 2. Installation
+## **2\. Prerequisites**
 
-Either you clone the project and run `kubectl apply -f ./demo/k8s-base-installation/install-demo-app.yaml` or you can run direct from our GitHub repository. 
+* A running Kubernetes Cluster (Single node clusters like K3s, Minikube, or Docker Desktop work fine).  
+* kubectl installed and configured.  
+* **Veeam Kasten** (for the backup/restore demo).
 
+## **3\. Installation**
 
+You can deploy the entire stack (Namespace, Postgres, and the FastAPI app) using the included manifest file.
 
-The server will start running, typically at `http://127.0.0.1:8000`.
+### **Step 1: Deploy**
 
-## 6. Testing the API (CRUD Operations)
+Run the following command to apply the Kubernetes manifests:
 
-You can test all the functionality directly in your browser using the interactive documentation provided by FastAPI (Swagger UI).
-
-Open the Docs: Go to `http://127.0.0.1:8000/docs` in your web browser.
-
-Populate the Database (C - Seeder):
-
-Find the POST `/populate_50` endpoint.
-
-Click "Try it out" and then "Execute".
-
-You should receive a 201 status code and a message confirming 50 users were added. This data is now persistent inside your Docker volume.
-
-Read All Data (R):
-
-Find the GET `/users/` endpoint.
-
-Click "Try it out" and then "Execute".
-
-The response body will show a JSON list of all 50 generated users, confirming your connection to the Dockerized database works.
-
-Create a Single User (C):
-
-Find the POST `/users/` endpoint.
-
-Click "Try it out" and replace the example body with your custom data:
 ```
-{
-  "firstname": "John",
-  "lastname": "Doe",
-  "zip_code": "10001",
-  "country": "USA"
-}
+kubectl apply -f install-demo-app.yaml
 ```
 
-Execute. Note the id of the newly created user (e.g., 51).
+### **Step 2: Verify**
 
-Modify a User (U):
+Check that the pods are running in the demo-app namespace:
 
-Find the PUT `/users/{user_id}` endpoint.
-
-Click "Try it out", enter the id from step 4 (e.g., 51) in the path parameter, and update the body:
 ```
-{
-  "firstname": "Jane",
-  "lastname": "Doe",
-  "zip_code": "90210",
-  "country": "USA"
-}
+kubectl get pods \-n demo-app
 ```
 
-Execute and verify the user data is updated.
+*Wait until all pods show a status of Running.*
 
-Remove a User (D):
+### **Step 3: Access the Application**
 
-Find the DELETE `/users/{user_id}` endpoint.
+The application Service is exposed via NodePort on port **30080**.
 
-Click "Try it out", enter the id (e.g., 51), and execute.
+* `kubectl get node -o wide` to find your NODE-IP.
+* **Remote Cluster:** http://\<NODE-IP\>:30080
 
-The status code should be 204 No Content. Verify by trying to GET `/users/51` which should return a 404 Not Found.
+## **4\. Usage & Testing (CRUD Operations)**
 
-## Known Issues
+The application includes an interactive Swagger UI to manage the data.
 
-If your environment is a small SuSE k3s or Ubuntu SnapK8s you probably ending up with local-path Storage Class. 
-```
-$ kubectl get sc
-NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  3d21h
-$ 
-```
+1. **Open the Docs:** Navigate to `http://127.0.0.1:30080/docs` in your browser.  
+2. **Populate the Database (Seeder):**  
+   * Find the POST /populate\_50 endpoint.  
+   * Click **Try it out** \-\> **Execute**.  
+   * *Result:* 50 synthetic users are added to the database.  
+3. **Read Data:**  
+   * Use the GET /users/ endpoint to see the list of created users.  
+4. **Modify/Delete:**  
+   * Use PUT or DELETE on /users/{user\_id} to modify specific records.
 
-Kasten has a legacy support that calles **Generic Storage Backup (GCB)** that can startup a Kanister Sidecar, but this is not recommended so you should run a true **Container Storage Interface (CSI) Volume Snapshot** storage class like Ceph, QuoByte, NFS, Longhorn, IBM Storage Scale and many other. 
+## **5\. Install Veeam Kasten**
+
+To be able to install Veeam Kasten and use it with this demo app, either you install it via the Kasten Helm chart or Openshift Operator.
+You have a detailed guide on how to do this in the following blog post:
+
+👉 [**Get Started with Protecting Your Containers**](https://www.isstech.io/blogg/get-started-with-protecting-your-containers)
+
+## **6\. More senarios**
+1. [Migrate from NGINX to Traefik Example](./demo/nginx-treafik.md)
+2. [Sanitize Data on Restore Example](./demo/data-sanitization.md)
+
+## **7\. Known Issues & Storage**
+
+If your environment is a small K3s or local cluster, you might be using the local-path Storage Class:
+
+$ kubectl get sc  
+NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE        
+local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   
+
+**Recommendation:** While Kasten supports Generic Storage Backup (GCB) for these environments using sidecars, for a production-grade experience, it is highly recommended to run a true **CSI (Container Storage Interface) Volume Snapshot** capable storage class, such as:
+
+* Ceph / Rook  
+* Longhorn  
+* AWS EBS / Azure Disk / Google PD  
+* NetApp / Pure Storage

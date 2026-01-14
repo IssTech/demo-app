@@ -1,0 +1,22 @@
+apiVersion: config.kio.kasten.io/v1alpha1
+kind: TransformSet
+metadata:
+  name: migrate-nginx-to-traefik
+  namespace: kasten-io
+spec:
+  transforms:
+    - subject:
+        group: networking.k8s.io
+        resource: ingresses
+      name: change-ingress-class
+      json:
+        - op: replace
+          path: /spec/ingressClassName
+          value: traefik
+    - subject:
+        group: networking.k8s.io
+        resource: ingresses
+      name: remove-nginx-annotation
+      json:
+        - op: remove
+          path: /metadata/annotations/nginx.ingress.kubernetes.io~1rewrite-target
