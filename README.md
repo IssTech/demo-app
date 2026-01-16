@@ -19,6 +19,7 @@ It includes a Multiple Kanister Blueprint that shows multiple demo senarios, the
 ## **3\. Installation**
 
 You can deploy the entire stack (Namespace, Postgres, and the FastAPI app) using the included manifest file.
+All files are located in the `demo` folder, and the main installation file are located under `k8s-base-install`
 
 ### **Step 1: Deploy**
 
@@ -33,7 +34,7 @@ kubectl apply -f install-demo-app.yaml
 Check that the pods are running in the demo-app namespace:
 
 ```
-kubectl get pods \-n demo-app
+kubectl get pods -n demo-app
 ```
 
 *Wait until all pods show a status of Running.*
