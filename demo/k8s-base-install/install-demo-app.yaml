@@ -35,12 +35,11 @@ metadata:
 spec:
   selector:
     app: demo-app
-  type: NodePort
+  type: ClusterIP 
   ports:
     - protocol: TCP
       port: 80 
       targetPort: 8000
-      nodePort: 30080
 
 ---
 
