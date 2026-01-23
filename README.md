@@ -41,8 +41,25 @@ kubectl get pods -n demo-app
 
 ### **Step 3: Access the Application**
 
-The application Service is exposed via NodePort on port **30080**.
+The application Service is created using `ClusterIP` as default.
+If you want to access the app instead of using a ingress controller, you can use port-forward or change the service type to NodePort in the manifest.
 
+if you want to use port-forward, run the following command:
+```
+kubectl -n demo-app port-forward svc/fastapi-postgres-demo 30080:80
+```
+
+If you want to use NodePort, edit the `install-demo-app.yaml` file and change the type from `ClusterIP` to `NodePort`, then re-apply the manifest:
+```
+spec:
+  type: NodePort
+   ports:
+      - port: 80
+         targetPort: 80
+         nodePort: 30080
+```
+And to access the application, use the following URL based on your cluster type:
+* **Local Cluster:** http://
 * `kubectl get node -o wide` to find your NODE-IP.
 * **Remote Cluster:** http://\<NODE-IP\>:30080
 

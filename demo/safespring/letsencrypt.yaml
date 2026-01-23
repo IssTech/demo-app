@@ -11,7 +11,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-  - demo-app.apps.isstech-2.paas.safedc.net
+  - demo-app.apps.demoapp.paas.safedc.net
 
 ---
 
