@@ -12,8 +12,7 @@ actions:
       objects:
         pgSecret:
           kind: Secret
-          # name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql'
-          name: 'postgres-postgresql'
+          name: '{{ index .Object.metadata.labels "app.kubernetes.io/instance"}}-postgresql'
           namespace: '{{ .StatefulSet.Namespace }}'
       args:
         operation: create
@@ -44,7 +43,7 @@ actions:
                 - -c
                 - |
                   export PGHOST='{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql.{{ .StatefulSet.Namespace }}.svc.cluster.local'
-                  export PGUSER='postgres'
+                  export PGUSER='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "POSTGRES_USER" | toString }}'
                   export PGPASSWORD='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "POSTGRES_PASSWORD" | toString }}'
                   ## Create file descriptor to send commands to psql
                   mkfifo /tmp/pg_in
@@ -128,18 +127,30 @@ actions:
       func: KubeOps
       args:
         operation: create
-        namespace: 'test-ns'
+        namespace: '{{ .Object.metadata.name }}'
         spec: |-
           apiVersion: v1
           kind: Pod
           metadata:
             name: postgres-sanity-session
+            namespace: '{{ .Object.metadata.name }}'
           spec:
             restartPolicy: Never
             containers:
               - name: container
                 image: postgres:17
                 pullPolicy: IfNotPresent
+                env:
+                  - name: PGUSER
+                    valueFrom:
+                      secretKeyRef:
+                        name: postgres-postgresql
+                        key: POSTGRES_USER
+                  - name: PGPASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: postgres-postgresql
+                        key: POSTGRES_PASSWORD
                 command:
                 - bash
                 - -o
@@ -148,12 +159,35 @@ actions:
                 - pipefail
                 - -c
                 - |
-                  export PGHOST='postgres-postgresql'
-                  export PGUSER='postgres'
-                  export PGPASSWORD='password'
+                  echo "--- STARTING SANITIZATION ---"
+
+                  # We use 'postgres-postgresql' as the service name based on your secret's connection string
+                  export PGHOST="postgres-postgresql.{{ .Object.metadata.name }}.svc.cluster.local"
+                  
+                  echo "Target Namespace: {{ .Object.metadata.name }}"
+                  echo "Target Host: $PGHOST"
+                  echo "Target User: $PGUSER"
+                  
                   export SQL_COMMAND="WITH new_firstnames AS (SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn, 'AAAAA-' || LEFT(MD5(ROW_NUMBER() OVER (ORDER BY id)::text), 5) || '-' || ROW_NUMBER() OVER (ORDER BY id)::text AS new_value FROM users) UPDATE users AS u SET firstname = n.new_value FROM new_firstnames AS n WHERE u.id = n.id;"
-                  echo "Executing SQL: $SQL_COMMAND"
+                  
+                  echo "Executing SQL update..."
                   psql -h $PGHOST -U $PGUSER -d demo_app_db -c "$SQL_COMMAND"
+                  
+                  echo "--- COMPLETED ---"
+
+    - name: waitSanitizationComplete
+      func: WaitV2
+      args:
+        timeout: 5m
+        conditions:
+          anyOf:
+            - condition: '{{ eq .status.phase "Succeeded" }}'
+              objectReference:
+                apiVersion: v1
+                resource: pods
+                name: "postgres-sanity-session"
+                namespace: '{{ .Object.metadata.name }}'
+
     - name: deleteSanityPodSession
       func: KubeOps
       args:
@@ -162,4 +196,4 @@ actions:
           apiVersion: v1
           resource: "pods"
           name: "postgres-sanity-session"
-          namespace: 'test-ns'
+          namespace: '{{ .Object.metadata.name }}'

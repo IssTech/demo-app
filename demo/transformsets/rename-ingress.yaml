@@ -1,0 +1,23 @@
+apiVersion: config.kio.kasten.io/v1alpha1
+kind: TransformSet
+metadata:
+  name: demo2-ingress-rewrite
+  namespace: kasten-io
+spec:
+  transforms:
+    - subject:
+        group: networking.k8s.io
+        resource: ingresses
+      name: rewrite-host-and-tls
+      json:
+        - op: replace
+          path: /spec/rules/0/host
+          value: demo-test.apps.company.paas.safedc.net
+  
+        - op: replace
+          path: /spec/tls/0/hosts/0
+          value: demo-test.apps.company.paas.safedc.net
+          
+        - op: replace
+          path: /spec/tls/0/secretName
+          value: demo-test-tls-secret
