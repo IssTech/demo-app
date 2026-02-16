@@ -42,7 +42,8 @@ actions:
                 - pipefail
                 - -c
                 - |
-                  export PGHOST='{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql.{{ .StatefulSet.Namespace }}.svc.cluster.local'
+                  export PGHOST_OLD='{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql.{{ .StatefulSet.Namespace }}.svc.cluster.local'
+                  export PGHOST='{{ index .Object.metadata.labels "kanister.io/serviceName" }}.{{ .StatefulSet.Namespace }}.svc.cluster.local'
                   export PGUSER='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "POSTGRES_USER" | toString }}'
                   export PGPASSWORD='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "POSTGRES_PASSWORD" | toString }}'
                   ## Create file descriptor to send commands to psql
@@ -54,9 +55,11 @@ actions:
                   ## Run psql session reading from pg_in and writing ot pg_out
                   ## Using tee here to keep the pod logs (might need to replace with just `> /tmp/pg_out`)
                   ## TODO: should we track stderr here?
-                  echo $PGPASSWORD
-                  echo $PGUSER
+                  echo ############################
                   echo $PGHOST
+                  echo ############################
+                  echo $PGHOST_OLD
+                  echo ############################
                   cat /tmp/pg_in | psql -h $PGHOST -U $PGUSER | tee /tmp/pg_out
     - func: WaitV2
       name: waitBackupSessionPodReady
