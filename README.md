@@ -6,7 +6,8 @@ It includes a Multiple Kanister Blueprint that shows multiple demo senarios, the
 
 ## **1\. Architecture**
 
-* **App:** FastAPI (Python) web server.  
+* **Front-end WebUI:** SvelteKit (JavaScript) web application.  
+* **Back-end API:** FastAPI (Python) web server.  
 * **Database:** PostgreSQL 17 (deployed as a StatefulSet).  
 * **Infrastructure:** Kubernetes Namespace, ConfigMaps, Secrets, and Services.
 
