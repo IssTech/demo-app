@@ -1,6 +1,6 @@
 # **DEMO-APP: FastAPI & PostgreSQL on Kubernetes**
 
-This is a Demo Application built with **FastAPI** and **PostgreSQL**, designed specifically for use with **Kasten by Veeam**. Its primary purpose is to demonstrate Kubernetes Backup and Restore capabilities, specifically highlighting **"Backup-as-Code"**.
+This is a Demo Application built with **SVELT**, **FastAPI** and **PostgreSQL**, designed specifically for use with **Kasten by Veeam**. Its primary purpose is to demonstrate Kubernetes Backup and Restore capabilities, specifically highlighting **"Backup-as-Code"**.
 
 It includes a Multiple Kanister Blueprint that shows multiple demo senarios, the first was performing **Data Sanitization** (masking PII) during the restore phase, showing how you can transform data securely when moving between environments (e.g., from Production to Development).
 
@@ -46,10 +46,10 @@ If you want to access the app instead of using a ingress controller, you can use
 
 if you want to use port-forward, run the following command:
 ```
-kubectl -n demo-app port-forward svc/fastapi-postgres-demo 30080:80
+kubectl -n demo-app port-forward svc/demo-frontend-service 30080:80
 ```
 
-If you want to use NodePort, edit the `install-demo-app.yaml` file and change the type from `ClusterIP` to `NodePort`, then re-apply the manifest:
+If you want to use NodePort, edit the `install-demo-app.yaml` file and change `demo-frontend-service` type from `ClusterIP` to `NodePort`, then re-apply the manifest:
 ```
 spec:
   type: NodePort
@@ -92,13 +92,15 @@ You have a detailed guide on how to do this in the following blog post:
 
 If your environment is a small K3s or local cluster, you might be using the local-path Storage Class:
 
+```
 $ kubectl get sc  
 NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE        
 local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   
+```
 
 **Recommendation:** While Kasten supports Generic Storage Backup (GCB) for these environments using sidecars, for a production-grade experience, it is highly recommended to run a true **CSI (Container Storage Interface) Volume Snapshot** capable storage class, such as:
 
 * Ceph / Rook  
 * Longhorn  
 * AWS EBS / Azure Disk / Google PD  
-* NetApp / Pure Storage
+* NetApp / Pure Storage / IBM FlashSystem

@@ -25,6 +25,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+venv/
+.venv/
 exclude/
 demo-app.code-workspace
 # PyInstaller

@@ -4,12 +4,15 @@ from typing import List
 from contextlib import contextmanager
 
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from pydantic import BaseModel
 from faker import Faker
 
+APP_VERSION = "1.1.0"
 # --- 1. Configuration and Database Setup ---
 
 # NOTE: REPLACE THIS WITH YOUR ACTUAL POSTGRESQL CONNECTION STRING
@@ -79,9 +82,16 @@ class UserSchema(UserBase):
 # --- 4. FastAPI Application Setup and Dependencies ---
 
 app = FastAPI(
-    title="PostgreSQL FastAPI CRUD API",
-    description="A simple API for managing user records with CRUD operations and a data seeder.",
-    version="1.0.0"
+    title="PostgreSQL FastAPI CRUD API", 
+    description="A simple API to manage computer nodes and their partition backup data using PostgreSQL and FastAPI.",
+    version="1.0.1")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Dependency to get a database session
@@ -165,6 +175,16 @@ def delete_user(user_id: int, db: SessionLocal = Depends(get_db_session)):
     db.delete(db_user)
     db.commit()
     return
+
+@app.delete("/users/", status_code=200, summary="Delete all users")
+def delete_all_users(db: SessionLocal = Depends(get_db_session)):
+    """
+    Deletes all user records from the database.
+    """
+    # Deletes all rows in the users table and returns the count of deleted rows
+    num_deleted = db.query(User).delete()
+    db.commit()
+    return {"message": f"Successfully deleted {num_deleted} users."}
 
 # --- 6. Data Seeder Endpoint ---
 

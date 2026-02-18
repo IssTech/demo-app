@@ -11,7 +11,7 @@ spec:
       paths:
       - backend:
           service:
-            name: demo-app-service 
+            name: demo-frontend-service
             port:
               number: 80
         path: /
