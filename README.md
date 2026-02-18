@@ -13,7 +13,7 @@ It includes a Multiple Kanister Blueprint that shows multiple demo senarios, the
 
 ## **2\. Prerequisites**
 
-* A running Kubernetes Cluster (Single node clusters like K3s, Minikube, or Docker Desktop work fine).  
+* A running Kubernetes Cluster (Single node clusters like K3s, Minikube, or Snap MicroK8s work fine).  
 * kubectl installed and configured.  
 * **Veeam Kasten** (for the backup/restore demo).
 
