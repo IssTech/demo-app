@@ -1,4 +1,4 @@
-# **DEMO-APP: FastAPI & PostgreSQL on Kubernetes**
+# **DEMO-APP: Backup & Restore Test in k8s**
 
 This is a Demo Application built with **SVELT**, **FastAPI** and **PostgreSQL**, designed specifically for use with **Kasten by Veeam**. Its primary purpose is to demonstrate Kubernetes Backup and Restore capabilities, specifically highlighting **"Backup-as-Code"**.
 
