@@ -44,11 +44,20 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image for Backend
         # Uses the Dockerfile in the current directory and pushes it
         uses: docker/build-push-action@v5
         with:
-          context: . # Looks for Dockerfile in the current directory
+          context: ./backend # Looks for Dockerfile in the backend directory
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      
+      - name: Build and push Docker image for Frontend
+        # Uses the Dockerfile in the current directory and pushes it
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend # Looks for Dockerfile in the frontend directory
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}    
