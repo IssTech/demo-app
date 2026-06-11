@@ -9,37 +9,56 @@
   
   // STATE
   let users = [];
+  let totalUsers = 0;
+  let currentPage = 1;
+  let pageSize = 25;
   let isDarkMode = true;
   let isAutoRefreshing = false;
   let isLoading = false;
   let pollInterval;
   let error = null;
 
+  $: totalPages = Math.ceil(totalUsers / pageSize) || 1;
+
   // --- ACTIONS ---
 
-async function fetchUsers() {
-  try {
-    // STEP 1: The network request SUCCEEDS (Status 200).
-    const res = await fetch(`${API_URL}/users/?limit=100`);
+  async function fetchUsers() {
+    try {
+      const skip = (currentPage - 1) * pageSize;
+      const res = await fetch(`${API_URL}/users/?skip=${skip}&limit=${pageSize}`);
+      if (!res.ok) throw new Error("Failed to connect to API");
 
-    // STEP 2: This passes because res.ok is true.
-    if (!res.ok) throw new Error("Failed to connect to API");
-
-    // The browser refuses to let JavaScript read the JSON because of the missing CORS header.
-    users = await res.json(); 
-    error = null;
-
-  } catch (e) {
-    // STEP 4: The code jumps here immediately.
-    error = "Backend Disconnected"; 
-    console.error(e);
+      users = await res.json();
+      
+      // Retrieve the total user count from the custom header (fallback to local length if missing)
+      const totalHeader = res.headers.get('X-Total-Count');
+      totalUsers = totalHeader ? parseInt(totalHeader, 10) : users.length;
+      
+      error = null;
+    } catch (e) {
+      error = "Backend Disconnected"; 
+      console.error(e);
+    }
   }
-}
+
+  function handlePageSizeChange(e) {
+    pageSize = parseInt(e.target.value, 10);
+    currentPage = 1;
+    fetchUsers();
+  }
+
+  function changePage(page) {
+    if (page >= 1 && page <= totalPages) {
+      currentPage = page;
+      fetchUsers();
+    }
+  }
 
   async function populateData() {
     isLoading = true;
     try {
       await fetch(`${API_URL}/populate_50`, { method: 'POST' });
+      currentPage = 1;
       await fetchUsers();
     } catch (e) {
       alert("Failed to populate data");
@@ -56,7 +75,7 @@ async function fetchUsers() {
       const res = await fetch(`${API_URL}/users/`, { method: 'DELETE' });
       if (!res.ok) throw new Error("Failed to delete");
       
-      // Refresh the list (which should now be empty)
+      currentPage = 1;
       await fetchUsers();
     } catch (e) {
       console.error(e);
@@ -64,7 +83,7 @@ async function fetchUsers() {
     } finally {
       isLoading = false;
     }
-}
+  }
 
   // Toggle Auto-Refresh (The "Live" View)
   function toggleLiveMode() {
@@ -187,7 +206,7 @@ async function fetchUsers() {
       <div class="flex justify-between items-start">
         <div>
           <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Records</p>
-          <h3 class="text-3xl font-bold mt-2">{users.length}</h3>
+          <h3 class="text-3xl font-bold mt-2">{totalUsers}</h3>
         </div>
         <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
           <Users size={24} />
@@ -313,6 +332,62 @@ async function fetchUsers() {
                     {/each}
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span>Show</span>
+                    <select 
+                        value={pageSize} 
+                        on:change={handlePageSizeChange}
+                        class="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1 text-slate-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-isstech-500 focus:border-isstech-500 text-sm"
+                    >
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                    </select>
+                    <span>records</span>
+                </div>
+                <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+                <div>
+                    Showing <span class="font-semibold text-slate-700 dark:text-slate-300">{users.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to 
+                    <span class="font-semibold text-slate-700 dark:text-slate-300">{Math.min(currentPage * pageSize, totalUsers)}</span> of 
+                    <span class="font-semibold text-slate-700 dark:text-slate-300">{totalUsers}</span> records
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+                <button 
+                    on:click={() => changePage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                    Previous
+                </button>
+
+                {#each Array(totalPages) as _, i}
+                    <button 
+                        on:click={() => changePage(i + 1)}
+                        class={`px-3 py-1.5 rounded-lg border font-medium text-xs transition-all ${
+                            currentPage === i + 1 
+                                ? 'bg-isstech-500 text-white border-isstech-500 shadow-md shadow-isstech-500/20' 
+                                : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        {i + 1}
+                    </button>
+                {/each}
+
+                <button 
+                    on:click={() => changePage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                    Next
+                </button>
+            </div>
         </div>
     {/if}
   </div>

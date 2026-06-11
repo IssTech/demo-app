@@ -26,7 +26,7 @@ actions:
             restartPolicy: Never
             containers:
               - name: container
-                image: postgres:17
+                image: pgvector/pgvector:pg17
                 resources:
                   requests:
                     memory: "512Mi"
@@ -124,7 +124,8 @@ actions:
           namespace: '{{ .StatefulSet.Namespace }}'
 
   dataSanitization:
-    kind: StatefulSet
+    # kind: StatefulSet
+    kind: Namespace
     phases:
     - name: createSanditySessionPod
       func: KubeOps
@@ -141,7 +142,7 @@ actions:
             restartPolicy: Never
             containers:
               - name: container
-                image: postgres:17
+                image: pgvector/pgvector:pg17
                 pullPolicy: IfNotPresent
                 env:
                   - name: PGUSER
@@ -171,7 +172,26 @@ actions:
                   echo "Target Host: $PGHOST"
                   echo "Target User: $PGUSER"
                   
-                  export SQL_COMMAND="WITH new_firstnames AS (SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn, 'AAAAA-' || LEFT(MD5(ROW_NUMBER() OVER (ORDER BY id)::text), 5) || '-' || ROW_NUMBER() OVER (ORDER BY id)::text AS new_value FROM users) UPDATE users AS u SET firstname = n.new_value FROM new_firstnames AS n WHERE u.id = n.id;"
+                  export SQL_COMMAND="
+                  BEGIN;
+                  -- 1. Sanitize the primary users table
+                  WITH new_firstnames AS (
+                      SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn, 
+                      'AAAAA-' || LEFT(MD5(ROW_NUMBER() OVER (ORDER BY id)::text), 5) || '-' || ROW_NUMBER() OVER (ORDER BY id)::text AS new_value 
+                      FROM users
+                  ) 
+                  UPDATE users AS u 
+                  SET firstname = n.new_value 
+                  FROM new_firstnames AS n 
+                  WHERE u.id = n.id;
+
+                  -- 2. Sanitize the text summary in the vector table to prevent GUI leaks
+                  UPDATE data_embeddings AS e
+                  SET sanitized_summary = 'User ID: ' || u.id || '. Name: ' || u.firstname || ' ' || u.lastname || '. Country: ' || u.country || '. Zip Code: ' || u.zip_code || '.'
+                  FROM users AS u
+                  WHERE e.record_id = u.id;
+                  COMMIT;
+                  "
                   
                   echo "Executing SQL update..."
                   psql -h $PGHOST -U $PGUSER -d demo_app_db -c "$SQL_COMMAND"
@@ -191,12 +211,12 @@ actions:
                 name: "postgres-sanity-session"
                 namespace: '{{ .Object.metadata.name }}'
 
-    - name: deleteSanityPodSession
-      func: KubeOps
-      args:
-        operation: delete
-        objectReference:
-          apiVersion: v1
-          resource: "pods"
-          name: "postgres-sanity-session"
-          namespace: '{{ .Object.metadata.name }}'
+    # - name: deleteSanityPodSession
+    #   func: KubeOps
+    #   args:
+    #     operation: delete
+    #     objectReference:
+    #       apiVersion: v1
+    #       resource: "pods"
+    #       name: "postgres-sanity-session"
+    #       namespace: '{{ .Object.metadata.name }}'

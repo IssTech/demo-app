@@ -20,14 +20,14 @@ It includes a Multiple Kanister Blueprint that shows multiple demo senarios, the
 ## **3\. Installation**
 
 You can deploy the entire stack (Namespace, Postgres, FastAPI and the SvelteKit app) using the included manifest file.
-All files are located in the `demo` folder, and the main installation file are located under `k8s-base-install`
+All files are located in the `demo` folder, and the main installation file is located under `k8s-base-install`.
 
 ### **Step 1: Deploy**
 
 Run the following command to apply the Kubernetes manifests:
 
 ```
-kubectl apply -f install-demo-app.yaml
+kubectl apply -f demo/k8s-base-install/install-demo-app-offline.yaml
 ```
 
 ### **Step 2: Verify**
@@ -50,7 +50,7 @@ if you want to use port-forward, run the following command:
 kubectl -n demo-app port-forward svc/demo-frontend-service 30080:80
 ```
 
-If you want to use NodePort, edit the `install-demo-app.yaml` file and change `demo-frontend-service` type from `ClusterIP` to `NodePort`, then re-apply the manifest:
+If you want to use NodePort, edit the `demo/k8s-base-install/install-demo-app-offline.yaml` file and change `demo-frontend-service` type from `ClusterIP` to `NodePort`, then re-apply the manifest:
 ```
 spec:
   type: NodePort

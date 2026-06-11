@@ -6,7 +6,7 @@ from typing import List, Generator
 from contextlib import contextmanager
 
 import requests
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
@@ -117,6 +117,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Total-Count"],
 )
 
 @contextmanager
@@ -209,8 +210,10 @@ def create_user(user: UserCreate, db: Session = Depends(get_db_session)):
     return db_user
 
 @app.get("/users/", response_model=List[UserSchema], summary="Read all users")
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db_session)):
-    """Retrieves all registered user profiles with pagination support."""
+def read_users(response: Response, skip: int = 0, limit: int = 100, db: Session = Depends(get_db_session)):
+    """Retrieves all registered user profiles with pagination support, returning the total count in the X-Total-Count header."""
+    total_count = db.query(User).count()
+    response.headers["X-Total-Count"] = str(total_count)
     return db.query(User).offset(skip).limit(limit).all()
 
 @app.get("/users/{user_id}", response_model=UserSchema, summary="Read a single user by ID")
