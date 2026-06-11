@@ -74,6 +74,6 @@ jobs:
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend # Looks inside your backend folder
+          context: ./backend # Looks inside your backend folder for the Dockerfile
           push: true
           tags: ${{ env.FINAL_TAGS }}
