@@ -78,18 +78,34 @@ The application includes an interactive Swagger UI to manage the data.
 4. **Modify/Delete:**  
    * Use PUT or DELETE on /users/{user\_id} to modify specific records.
 
-## **5\. Install Veeam Kasten**
+## **5\. Local LLM & Air-Gapped Agentic AI Capabilities**
+
+This application includes fully containerized, secure, **local LLM and Agentic AI operations** that run completely isolated inside firewalled Kubernetes pods or local Docker environments, requiring no external internet access or cloud API credentials.
+
+### **The AI Architecture & Models**
+When deploying the offline stack, the FastAPI backend is launched alongside a local **Ollama** sidecar container sharing the same Pod network namespace:
+* **Chat Reasoning Model (`llama3.2:3b`)**: Serves as the generative database agent, understanding natural language prompts and determining how to interact with database schemas using function-calling.
+* **Vector Embedding Model (`nomic-embed-text:latest`)**: Generates 768-dimensional float vectors to represent database entries, stored in our **PGVector** similarity tables (`data_embeddings`).
+
+### **Floating Agentic AI Chat Widget**
+A floating assistant chat widget is available in the bottom-right of the Svelte UI. It demonstrates local tool-calling capabilities by registering and orchestrating two secure backend routes:
+1. **`run_sql_query`**: Converts natural language requests (e.g., *"How many users are in Sweden?"*) into read-only SQL queries. It features ad-hoc stacked-statement blocking and mutation word blocklists (`DROP`, `DELETE`, etc.) for absolute safety.
+2. **`semantic_search_users`**: Converts natural language descriptions (e.g., *"Find users similar to John"*) into vector cosine-distance matches using PGVector.
+
+---
+
+## **6\. Install Veeam Kasten**
 
 To be able to install Veeam Kasten and use it with this demo app, either you install it via the Kasten Helm chart or Openshift Operator.
 You have a detailed guide on how to do this in the following blog post:
 
 👉 [**Get Started with Protecting Your Containers**](https://www.isstech.io/blogg/get-started-with-protecting-your-containers)
 
-## **6\. More senarios**
+## **7\. More Scenarios**
 1. [Migrate from NGINX to Traefik Example](./demo/nginx-treafik.md)
 2. [Sanitize Data on Restore Example](./demo/data-sanitization.md)
 
-## **7\. Known Issues & Storage**
+## **8\. Known Issues & Storage**
 
 If your environment is a small K3s or local cluster, you might be using the local-path Storage Class:
 
@@ -105,3 +121,11 @@ local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsu
 * Longhorn  
 * AWS EBS / Azure Disk / Google PD  
 * NetApp / Pure Storage / IBM FlashSystem
+
+---
+
+### **Port-Forwarding Namespace Limitation (v1.2.0)**
+
+If you are accessing the development or test environment locally using `kubectl port-forward`, please note that the current pre-configured forwarding and local routing setups require the application to be deployed under the default `demo-app` namespace. 
+
+If running under other namespaces (like `demo1` or `demo2`), port-forwarding may require manual DNS or Service address overrides to map local requests correctly. This namespace limitation is present in **v1.2.0** and is scheduled to be fully resolved in a later release.

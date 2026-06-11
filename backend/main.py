@@ -14,7 +14,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from pydantic import BaseModel
 from faker import Faker
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 # --- 1. Configuration & Database Connection ---
 

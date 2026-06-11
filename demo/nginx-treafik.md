@@ -12,9 +12,9 @@ For a deep dive, read the full blog post:
 If moving to Traefik, we can preserve the Ingress resource but must transform it during restore to match the new controller.
 
 1. Create the Transform Set:  
-   Apply the treafik-transformSet.yaml file. This tells Kasten to change the ingressClassName from nginx to traefik and remove NGINX-specific annotations.  
+   Apply the `demo/nginx-demo/treafik-transformSet.yaml` file. This tells Kasten to change the ingressClassName from nginx to traefik and remove NGINX-specific annotations.  
    ```
-   kubectl apply -f treafik-transformSet.yaml
+   kubectl apply -f demo/nginx-demo/treafik-transformSet.yaml
    ```
 
 2. **Restore with Transform:**  
@@ -36,6 +36,6 @@ Gateway API uses different resources (Gateway, HTTPRoute) than the standard Ingr
    * Once restored, apply the new Gateway API definitions (e.g., for Cilium or other providers):
 
 ```
-kubectl apply -f gateway-cilium.yaml
+kubectl apply -f demo/gateway-api/gateway-cilium.yaml
 ```
 *Note: This file deploys the GatewayClass, Gateway, and HTTPRoute required to expose the app.*
