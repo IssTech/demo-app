@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
       - name: demo-app-container
-        image: ghcr.io/isstech/demo-backend:AgenticAI
+        image: ghcr.io/isstech/demo-backend:1.2.0
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -280,7 +280,7 @@ spec:
     spec:
       containers:
       - name: svelte-container
-        image: ghcr.io/isstech/demo-frontend:AgenticAI
+        image: ghcr.io/isstech/demo-frontend:1.2.0
         imagePullPolicy: Always
         ports:
         - containerPort: 80
