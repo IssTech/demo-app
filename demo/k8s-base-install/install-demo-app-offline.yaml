@@ -216,7 +216,7 @@ spec:
     spec:
       containers:
       - name: demo-app-container
-        image: ghcr.io/isstech/demo-backend:v1.1.0
+        image: ghcr.io/isstech/demo-backend:AgenticAI
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -237,6 +237,10 @@ spec:
           periodSeconds: 20
       - name: ollama-container
         image: ollama/ollama:latest
+        lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "ollama run llama3.2:3b"]
         imagePullPolicy: Always
         ports:
         - containerPort: 11434
@@ -268,7 +272,7 @@ spec:
     spec:
       containers:
       - name: svelte-container
-        image: ghcr.io/isstech/demo-frontend:v1.1.0
+        image: ghcr.io/isstech/demo-frontend:AgenticAI
         imagePullPolicy: Always
         ports:
         - containerPort: 80

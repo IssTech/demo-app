@@ -9,7 +9,7 @@ import requests
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, text
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from pydantic import BaseModel
 from faker import Faker
@@ -391,6 +391,11 @@ SYSTEM_INSTRUCTION = (
     "Guidelines:\n"
     "- Choose the most appropriate tool (or combine them) depending on the user query.\n"
     "- For security, only SELECT queries are allowed. Modifying operations are strictly forbidden.\n"
+    "- CRITICAL FOR SEARCH ACCURACY: PostgreSQL string filters are strictly case-sensitive. "
+    "When filtering names, countries, or other text fields, you MUST ALWAYS generate case-insensitive comparisons. "
+    "Always use the `ILIKE` operator instead of `=` (e.g., `firstname ILIKE 'john'` or `country ILIKE 'sweden'`), "
+    "or use the `LOWER()` function (e.g., `LOWER(firstname) = LOWER('john')`). "
+    "This ensures search parameters succeed regardless of how the user capitalizes their input.\n"
     "- Present the final output in a clear, friendly, and structured format with matching flag emojis or tables where applicable."
 )
 
