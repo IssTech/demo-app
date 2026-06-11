@@ -13,7 +13,7 @@ This repository includes a file named backup-sanitization.yaml. This is a Kanist
 1. Register the Blueprint:  
    Apply the blueprint to your cluster so Kasten can see it.  
    ```
-   kubectl apply -f backup-sanitization.yaml
+   kubectl apply -f demo/blueprint/backup-sanitization.yaml
    ```
 
 2. **Create a Policy in Kasten:**  

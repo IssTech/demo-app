@@ -4,3 +4,4 @@ sqlalchemy
 pydantic
 faker
 psycopg2-binary
+requests
