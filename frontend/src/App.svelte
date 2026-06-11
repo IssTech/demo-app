@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { Sun, Moon, Database, RefreshCw, Trash2, Users, ShieldCheck, ShieldAlert } from 'lucide-svelte';
+  import { Sun, Moon, Database, RefreshCw, Trash2, Users, ShieldCheck, ShieldAlert, Sparkles, MessageSquare, Send, X, Bot, Loader2 } from 'lucide-svelte';
     import { VERSION } from 'svelte/compiler';
   
   // CONFIGURATION
@@ -88,6 +88,69 @@ async function fetchUsers() {
 
   // Helper to detect if data looks "Sanitized" (Simple heuristic for demo visuals)
   $: isSanitized = users.length > 0 && users.some(u => u.firstname.includes('*') || u.firstname.includes('Anonymized'));
+
+  // --- AGENTIC AI CHAT STATE & FUNCTIONS ---
+  let isChatOpen = false;
+  let chatInput = "";
+  let chatMessages = [
+    { role: "assistant", content: "Hello! I am your Agentic AI assistant, powered by a local Ollama LLM. I can query and analyze any data inside our PostgreSQL database in real-time. Ask me a question, such as:\n• 'How many users are in the database?'\n• 'Where are the users from?'\n• 'List all users from Sweden or Norway'\n• 'Show me a breakdown of users by country'" }
+  ];
+  let isSending = false;
+  let chatContainer;
+
+  function scrollToBottom() {
+    if (chatContainer) {
+      setTimeout(() => {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 50);
+    }
+  }
+
+  async function sendChatMessage() {
+    if (!chatInput.trim() || isSending) return;
+
+    const userText = chatInput.trim();
+    chatInput = "";
+    
+    // Append user message
+    chatMessages = [...chatMessages, { role: "user", content: userText }];
+    scrollToBottom();
+    isSending = true;
+
+    try {
+      const res = await fetch(`${API_URL}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: chatMessages.map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Chat request failed");
+      }
+
+      const reply = await res.json();
+      chatMessages = [...chatMessages, { role: "assistant", content: reply.response }];
+    } catch (e) {
+      console.error(e);
+      chatMessages = [...chatMessages, { 
+        role: "assistant", 
+        content: "Sorry, I had trouble connecting to the local Ollama model. Please verify that the backend and Ollama are running." 
+      }];
+    } finally {
+      isSending = false;
+      scrollToBottom();
+    }
+  }
+
+  function handleKeydown(e) {
+    if (e.key === "Enter") {
+      sendChatMessage();
+    }
+  }
 
   onMount(() => {
     document.documentElement.classList.add('dark'); // Default to dark
@@ -260,6 +323,113 @@ async function fetchUsers() {
     IssTech Backup Demo • v{APP_VERSION}
   </p>
 </footer>
+
+<!-- Floating Agentic AI Chat Widget -->
+<div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+  {#if isChatOpen}
+    <div 
+      class="w-96 max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-8rem)] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden mb-4 transition-all duration-300"
+    >
+      <!-- Header -->
+      <div class="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-white flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="p-1.5 bg-[#49E97F]/10 rounded-lg text-[#49E97F]">
+            <Sparkles size={18} class="animate-pulse" />
+          </div>
+          <div class="text-left">
+            <h4 class="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+              Agentic AI Assistant
+            </h4>
+            <div class="flex items-center gap-1.5 text-[11px] text-[#49E97F] font-mono mt-0.5">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              Offline LLM Active
+            </div>
+          </div>
+        </div>
+        <button 
+          on:click={() => isChatOpen = false}
+          class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <!-- Chat Messages Container -->
+      <div 
+        bind:this={chatContainer}
+        class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50 dark:bg-slate-900/40 text-left"
+      >
+        {#each chatMessages as msg}
+          <div class={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div class={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+              msg.role === 'user' 
+                ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-sm shadow-sm' 
+                : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-sm shadow-sm'
+            }`}>
+              {#if msg.role === 'assistant'}
+                <div class="flex items-start gap-2">
+                  <div class="p-1 bg-[#49E97F]/10 rounded text-[#49E97F] mt-0.5 flex-shrink-0">
+                    <Bot size={14} />
+                  </div>
+                  <div class="leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                </div>
+              {:else}
+                <div class="leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+              {/if}
+            </div>
+          </div>
+        {/each}
+
+        {#if isSending}
+          <div class="flex justify-start">
+            <div class="max-w-[85%] bg-white dark:bg-slate-800 text-slate-500 rounded-2xl rounded-bl-sm px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2">
+              <Loader2 size={16} class="animate-spin text-[#49E97F]" />
+              <span class="animate-pulse">Agent is querying database...</span>
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Input Form -->
+      <div class="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+        <input 
+          type="text"
+          bind:value={chatInput}
+          on:keydown={handleKeydown}
+          placeholder="Ask database (e.g. Total users?)"
+          class="flex-1 px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#49E97F]/40 focus:border-[#49E97F] dark:text-white"
+        />
+        <button 
+          on:click={sendChatMessage}
+          disabled={!chatInput.trim() || isSending}
+          class="p-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-40 text-white rounded-xl shadow-md transition-all flex items-center justify-center"
+        >
+          <Send size={16} />
+        </button>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Floating Toggle Button -->
+  {#if !isChatOpen}
+    <button 
+      on:click={() => { isChatOpen = true; scrollToBottom(); }}
+      class="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:scale-105 active:scale-95 text-white rounded-full shadow-2xl transition-all flex items-center justify-center border-2 border-[#49E97F]"
+      aria-label="Open Agentic AI"
+    >
+      <div class="relative">
+        <Sparkles size={24} class="text-[#49E97F] animate-pulse" />
+        <span class="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+        </span>
+      </div>
+    </button>
+  {/if}
+</div>
 
 <style>
     /* Custom scrollbar for table */

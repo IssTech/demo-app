@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17 # Compiled PostgreSQL 17 image with pgvector extension enabled!
+    container_name: demo-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: demo_app_db
+    ports:
+      - "5433:5432" # Maps host 5433 to container 5432 to avoid collision
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d demo_app_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: demo-ollama
+    restart: always
+    ports:
+      - "11435:11434" # Maps host 11435 to container 11434 to avoid collision
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"] # Native Ollama CLI check (no curl needed)
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama-bootstrap:
+    image: curlimages/curl:latest
+    container_name: demo-ollama-bootstrap
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command: >
+      sh -c "
+      echo 'Ollama is online! Checking models...' &&
+      if curl -s http://ollama:11434/api/tags | grep -q 'llama3.2'; then
+        echo 'Model llama3.2 already exists!';
+      else
+        echo 'Pulling llama3.2 model...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"llama3.2:3b\"}';
+      fi &&
+      if curl -s http://ollama:11434/api/tags | grep -q 'nomic-embed-text'; then
+        echo 'Model nomic-embed-text already exists!';
+      else
+        echo 'Pulling nomic-embed-text embedding model...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"nomic-embed-text:latest\"}';
+      fi
+      "
+
+  backend:
+    build:
+      context: ./backend
+    container_name: demo-backend
+    restart: always
+    ports:
+      - "8001:8000" # Maps host 8001 to container 8000 to avoid collision
+    environment:
+      DATABASE_URL: "postgresql://postgres:password@postgres:5432/demo_app_db"
+      OLLAMA_HOST: "http://ollama:11434"
+      OLLAMA_MODEL: "llama3.2:3b"
+      OLLAMA_EMBED_MODEL: "nomic-embed-text:latest"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"] # Native python HTTP check
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: demo-frontend
+    restart: always
+    ports:
+      - "30080:80"
+    volumes:
+      - ./frontend-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  ollama_data:

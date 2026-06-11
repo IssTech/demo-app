@@ -54,6 +54,10 @@ data:
   DB_NAME: "demo_app_db"
   DB_HOST: "postgres-postgresql"
   DB_PORT: "5432"
+  # Ollama Configuration
+  OLLAMA_HOST: "http://127.0.0.1:11434"
+  OLLAMA_MODEL: "llama3.2:3b"
+  OLLAMA_EMBED_MODEL: "nomic-embed-text:latest"
 
 ---
 
@@ -105,21 +109,31 @@ spec:
 
 ---
 
+# Create PersistentVolumeClaim for Ollama models cache
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+  namespace: demo-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi 
+
+---
+
 # Installing PostgreSQL as a StatefulSet
 apiVersion: apps/v1
-kind: StatefulSet 
+kind: StatefulSet
 metadata:
   name: postgres
   namespace: demo-app
-  annotations:
-      kanister.kasten.io/blueprint: postgres-non-exclusive-backup
-  labels:
-        app: postgres
-        app.kubernetes.io/instance: postgres    
 spec:
   # Database usually runs as a single replica
   replicas: 1
-  serviceName: postgres-postgresql 
+  serviceName: postgres-postgresql
   selector:
     matchLabels:
       app: postgres
@@ -182,7 +196,7 @@ spec:
 
 ---
 
-# Deploy the back-end FastAPI
+# Deploy the back-end FastAPI with Ollama sidecar container
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -221,6 +235,18 @@ spec:
             port: 8000
           initialDelaySeconds: 15
           periodSeconds: 20
+      - name: ollama-container
+        image: ollama/ollama:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 11434
+        volumeMounts:
+        - name: ollama-storage
+          mountPath: /root/.ollama
+      volumes:
+      - name: ollama-storage
+        persistentVolumeClaim:
+          claimName: ollama-pvc
 
 ---
 
