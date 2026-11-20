@@ -1,0 +1,33 @@
+# Kasten policy chosen by a namespace LABEL instead of a list of names
+# (2026/11/20). Every namespace labelled
+#     backup=daily-3version
+# gets a daily backup, 3 restore points kept, exported to Safespring with
+# the same 3 versions. Add a namespace:    kubectl label ns <ns> backup=daily-3version
+# Remove it again:                          kubectl label ns <ns> backup-
+#
+# Kasten fills in the export's migrationToken/receiveString itself. Never
+# commit those values; patch fields on the live policy rather than re-applying.
+apiVersion: config.kio.kasten.io/v1alpha1
+kind: Policy
+metadata:
+  name: backup-daily-3version
+  namespace: kasten-io
+spec:
+  comment: "Daily, 3 versions, for every namespace labelled backup=daily-3version"
+  frequency: "@daily"
+  retention:
+    daily: 3
+  selector:
+    matchLabels:
+      backup: daily-3version
+  actions:
+    - action: backup
+      backupParameters:
+        profile: {name: safespring, namespace: kasten-io}
+    - action: export
+      exportParameters:
+        frequency: "@daily"
+        profile: {name: safespring, namespace: kasten-io}
+        exportData: {enabled: true}
+      retention:
+        daily: 3
