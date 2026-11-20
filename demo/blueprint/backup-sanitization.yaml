@@ -43,7 +43,9 @@ actions:
                 - -c
                 - |
                   export PGHOST_OLD='{{ index .Object.metadata.labels "app.kubernetes.io/instance" }}-postgresql.{{ .StatefulSet.Namespace }}.svc.cluster.local'
-                  export PGHOST='{{ index .Object.metadata.labels "kanister.io/serviceName" }}.{{ .StatefulSet.Namespace }}.svc.cluster.local'
+                  # The StatefulSet's own serviceName (postgres-postgresql), not a
+                  # kanister.io/serviceName label that the demo app never sets.
+                  export PGHOST='{{ .Object.spec.serviceName }}.{{ .StatefulSet.Namespace }}.svc.cluster.local'
                   export PGUSER='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "POSTGRES_USER" | toString }}'
                   export PGPASSWORD='{{ index .Phases.createBackupSessionPod.Secrets.pgSecret.Data "POSTGRES_PASSWORD" | toString }}'
                   ## Create file descriptor to send commands to psql
@@ -220,3 +222,101 @@ actions:
     #       resource: "pods"
     #       name: "postgres-sanity-session"
     #       namespace: '{{ .Object.metadata.name }}'
+
+  # V2 (2026/11/20): run as a restore hook (RestoreAction hooks.onSuccess, or
+  # "After restore" in the Kasten UI) on the namespace you restore INTO. Any
+  # namespace name works. Differences from dataSanitization above:
+  #   - waits for Postgres to accept connections before running the SQL;
+  #   - the session pod is always deleted afterwards (deferPhase), also when
+  #     the SQL fails, so the hook can run again in the same namespace;
+  #   - imagePullPolicy (was the non-existent field pullPolicy).
+  dataSanitizationV2:
+    kind: Namespace
+    phases:
+    - name: createSanitizationPod
+      func: KubeOps
+      args:
+        operation: create
+        namespace: '{{ .Object.metadata.name }}'
+        spec: |-
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: postgres-sanitization-v2
+            namespace: '{{ .Object.metadata.name }}'
+          spec:
+            restartPolicy: Never
+            containers:
+              - name: container
+                image: pgvector/pgvector:pg17
+                imagePullPolicy: IfNotPresent
+                resources:
+                  requests: {cpu: 100m, memory: 128Mi}
+                  limits: {cpu: 500m, memory: 256Mi}
+                env:
+                  - name: PGUSER
+                    valueFrom:
+                      secretKeyRef: {name: postgres-postgresql, key: POSTGRES_USER}
+                  - name: PGPASSWORD
+                    valueFrom:
+                      secretKeyRef: {name: postgres-postgresql, key: POSTGRES_PASSWORD}
+                  - name: PGHOST
+                    value: 'postgres-postgresql.{{ .Object.metadata.name }}.svc.cluster.local'
+                  - name: PGDATABASE
+                    value: demo_app_db
+                command:
+                - bash
+                - -o
+                - errexit
+                - -o
+                - pipefail
+                - -c
+                - |
+                  echo "--- SANITIZATION V2 in {{ .Object.metadata.name }} ---"
+                  # A restored Postgres needs a moment to start; wait up to 5 minutes.
+                  for i in $(seq 1 60); do
+                    pg_isready -q && break
+                    echo "waiting for $PGHOST ($i/60)"; sleep 5
+                  done
+                  pg_isready -q || { echo "Postgres never became ready"; exit 1; }
+                  psql -v ON_ERROR_STOP=1 <<'SQL'
+                  BEGIN;
+                  -- 1. Replace every first name with AAAAA-<hash>-<n>
+                  WITH new_firstnames AS (
+                      SELECT id,
+                             'AAAAA-' || LEFT(MD5(ROW_NUMBER() OVER (ORDER BY id)::text), 5)
+                             || '-' || ROW_NUMBER() OVER (ORDER BY id)::text AS new_value
+                      FROM users
+                  )
+                  UPDATE users AS u SET firstname = n.new_value
+                  FROM new_firstnames AS n WHERE u.id = n.id;
+                  -- 2. Rebuild the summary the GUI shows, so the old name does not leak there
+                  UPDATE data_embeddings AS e
+                  SET sanitized_summary = 'User ID: ' || u.id || '. Name: ' || u.firstname || ' ' || u.lastname
+                      || '. Country: ' || u.country || '. Zip Code: ' || u.zip_code || '.'
+                  FROM users AS u WHERE e.record_id = u.id;
+                  COMMIT;
+                  SQL
+                  echo "--- COMPLETED ---"
+    - name: waitSanitizationComplete
+      func: WaitV2
+      args:
+        timeout: 8m
+        conditions:
+          anyOf:
+            - condition: '{{ eq .status.phase "Succeeded" }}'
+              objectReference:
+                apiVersion: v1
+                resource: pods
+                name: postgres-sanitization-v2
+                namespace: '{{ .Object.metadata.name }}'
+    deferPhase:
+      name: deleteSanitizationPod
+      func: KubeOps
+      args:
+        operation: delete
+        objectReference:
+          apiVersion: v1
+          resource: pods
+          name: postgres-sanitization-v2
+          namespace: '{{ .Object.metadata.name }}'
