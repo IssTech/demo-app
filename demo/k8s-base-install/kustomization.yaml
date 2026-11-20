@@ -1,0 +1,6 @@
+# Lets overlays (for example ../isstech-int) build on the plain install
+# manifest. `kubectl apply -f install-demo-app-offline.yaml` works as before.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - install-demo-app-offline.yaml

@@ -1,0 +1,41 @@
+# Kasten policy for the demo app: a daily backup of namespace demo-app,
+# exported to the existing Safespring profile (the same location profile
+# issassist-protection and isscontrol-protection use).
+#
+# Kasten fills in the export's migrationToken/receiveString itself when the
+# policy is created. Never commit those values. To change the live policy
+# later, patch the field you mean rather than re-applying this file.
+apiVersion: config.kio.kasten.io/v1alpha1
+kind: Policy
+metadata:
+  name: demo-app-protection
+  namespace: kasten-io
+spec:
+  comment: "Demo app on demo.int.isstech.io (2026/11/20)"
+  frequency: "@daily"
+  retention:
+    daily: 3
+  selector:
+    matchExpressions:
+      - key: k10.kasten.io/appNamespace
+        operator: In
+        values: [demo-app]
+  actions:
+    - action: backup
+      backupParameters:
+        profile: {name: safespring, namespace: kasten-io}
+        filters:
+          excludeResources:
+            # The Ollama models are a download cache (llama3.2:3b and
+            # nomic-embed-text), pulled again on start. Not state.
+            - name: ollama-pvc
+              resource: persistentvolumeclaims
+              version: v1
+    - action: export
+      exportParameters:
+        frequency: "@daily"
+        profile: {name: safespring, namespace: kasten-io}
+        exportData: {enabled: true}
+      retention:
+        daily: 7
+        weekly: 4

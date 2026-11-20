@@ -1,0 +1,43 @@
+# Restore the demo app as a second copy on demo2.int.isstech.io.
+#
+# Use it when restoring a demo-app restore point into namespace demo-app2:
+# Kasten → Applications → demo-app → Restore → pick the restore point →
+# Application name "demo-app2" (new namespace) → Apply transforms →
+# "demo2-int-isstech-io" → Restore.
+#
+# What changes: the two HTTPRoutes move to demo2.int.isstech.io and to the
+# Gateway's demo2-* listeners, and the Certificate asks for demo2. The TLS
+# Secret keeps its name (demo-app-tls) and cert-manager re-issues it for
+# demo2 because the dnsNames changed. Everything else -- the database
+# volume included -- is restored as it was backed up.
+apiVersion: config.kio.kasten.io/v1alpha1
+kind: TransformSet
+metadata:
+  name: demo2-int-isstech-io
+  namespace: kasten-io
+spec:
+  comment: "demo-app restored to demo-app2 answers on demo2.int.isstech.io"
+  transforms:
+    - name: https-route-to-demo2
+      subject:
+        group: gateway.networking.k8s.io
+        resource: httproutes
+        name: demo-app
+      json:
+        - {op: replace, path: /spec/hostnames/0, value: demo2.int.isstech.io}
+        - {op: replace, path: /spec/parentRefs/0/sectionName, value: demo2-https}
+    - name: http-redirect-to-demo2
+      subject:
+        group: gateway.networking.k8s.io
+        resource: httproutes
+        name: demo-app-http-redirect
+      json:
+        - {op: replace, path: /spec/hostnames/0, value: demo2.int.isstech.io}
+        - {op: replace, path: /spec/parentRefs/0/sectionName, value: demo2-http}
+    - name: certificate-for-demo2
+      subject:
+        group: cert-manager.io
+        resource: certificates
+        name: demo-app
+      json:
+        - {op: replace, path: /spec/dnsNames/0, value: demo2.int.isstech.io}

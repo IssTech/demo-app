@@ -1,0 +1,83 @@
+# demo.int.isstech.io through the shared Gateway `cilium-gateway` in
+# namespace `isscontrol` (owned by IssTech/IssControl,
+# k8s/cluster/shared-gateway.yaml, listeners demo-http / demo-https and,
+# for the restored copy, demo2-http / demo2-https).
+#
+# The certificate Secret is called `demo-app-tls` in every namespace, so a
+# Kasten restore into `demo-app2` needs no Secret rename: the TransformSet
+# (kasten/transformset-demo2.yaml) only changes the hostnames and the
+# listener names. This ReferenceGrant is restored with the app and lets
+# the Gateway read the copy in the new namespace.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: demo-app
+  namespace: demo-app
+spec:
+  secretName: demo-app-tls
+  dnsNames:
+    - demo.int.isstech.io
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-isscontrol-gateway-tls-secret
+  namespace: demo-app
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: isscontrol
+  to:
+    - group: ""
+      kind: Secret
+      name: demo-app-tls
+---
+# HTTPS: the Svelte frontend; its nginx proxies /api/ to the backend.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: demo-app
+  namespace: demo-app
+spec:
+  hostnames:
+    - demo.int.isstech.io
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: cilium-gateway
+      namespace: isscontrol
+      sectionName: demo-https
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /}
+      backendRefs:
+        - kind: Service
+          name: demo-frontend-service
+          port: 80
+---
+# HTTP: redirect to HTTPS. cert-manager's ACME HTTP-01 solver attaches its
+# own route to this listener while a certificate is issued or renewed.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: demo-app-http-redirect
+  namespace: demo-app
+spec:
+  hostnames:
+    - demo.int.isstech.io
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: cilium-gateway
+      namespace: isscontrol
+      sectionName: demo-http
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /}
+      filters:
+        - type: RequestRedirect
+          requestRedirect: {scheme: https, statusCode: 301}

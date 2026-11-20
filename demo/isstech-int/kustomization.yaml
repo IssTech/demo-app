@@ -1,0 +1,61 @@
+# demo.int.isstech.io on IssTech's cluster (2026/11/20).
+#
+# The base manifest unchanged, plus what an internet-facing install on the
+# shared *.int.isstech.io Gateway needs. Apply with:
+#   kubectl apply -k demo/isstech-int
+# after the Secret `postgres-postgresql` exists (the owner script creates
+# it with a generated password; it is deliberately not in git).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../k8s-base-install
+  - gateway.yaml
+patches:
+  # The base ships POSTGRES_PASSWORD "password". Here the Secret is created
+  # outside git with a random password, so the base's copy is dropped.
+  - target: {kind: Secret, name: postgres-postgresql}
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: postgres-postgresql
+  # Ollama: pinned to the image IssControl's GPU node runs (same digest),
+  # never :latest. The two models are about 2.6 GB, so 20 GiB, not 70.
+  - target: {kind: PersistentVolumeClaim, name: ollama-pvc}
+    patch: |-
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: 20Gi
+  - target: {kind: Deployment, name: demo-backend}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/1/image
+        value: ollama/ollama@sha256:2b8eecdb85aa6ea67c381c8ecffec04b2658496cf2821a8f88b0485bdff198e8
+      - op: replace
+        path: /spec/template/spec/containers/1/imagePullPolicy
+        value: IfNotPresent
+      - op: add
+        path: /spec/template/spec/containers/1/resources
+        value:
+          requests: {cpu: "1", memory: 4Gi}
+          limits: {cpu: "4", memory: 6Gi}
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: "1", memory: 1Gi}
+  - target: {kind: Deployment, name: demo-frontend}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {cpu: 500m, memory: 256Mi}
+  - target: {kind: StatefulSet, name: postgres}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: {cpu: 100m, memory: 256Mi}
+          limits: {cpu: "1", memory: 1Gi}
